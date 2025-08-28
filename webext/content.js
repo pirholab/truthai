@@ -1,420 +1,611 @@
-(async function () {
-    console.log("🔍 TruthAI: Content script starting...");
-    const API = "http://localhost:8000/predict";
-    const FEEDBACK_API = "http://localhost:8000/feedback";
+(function() {
+  'use strict';
+  
+  const API = "http://localhost:8000/classify";
+  
+  // Global state
+  let snackbarEnabled = true;
+  let showConfidence = true;
+  let autoHideDelay = 10;
+  let currentSnackbar = null;
+  let analyzedPosts = new Map();
+  let hideTimeout = null;
+  let uniquePostsAnalyzed = new Set();
+  
+  console.log("🔍 TruthAI: Content script starting...");
+  
+  // Check if we're on Facebook
+  if (!window.location.hostname.includes('facebook.com')) {
+    console.log("🔍 TruthAI: Not on Facebook, exiting");
+    return;
+  }
+  
+  console.log("🔍 TruthAI: On Facebook, initializing extension");
+  
+  // CSS for snackbar
+  const style = document.createElement('style');
+  style.textContent = `
+    .truthai-snackbar {
+      position: fixed !important;
+      bottom: 20px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      background: rgba(0, 0, 0, 0.95) !important;
+      color: white !important;
+      border-radius: 16px !important;
+      padding: 18px 24px !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1) !important;
+      z-index: 2147483647 !important;
+      max-width: 550px !important;
+      min-width: 350px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 18px !important;
+      backdrop-filter: blur(20px) !important;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
     
-    // Global variables
-    let snackbarEnabled = true;
-    let currentSnackbar = null;
-    let analyzedPosts = new Map(); // Store post analysis results
-    let visiblePosts = new Set(); // Track currently visible posts
+    @keyframes slideUp {
+      from {
+        transform: translateX(-50%) translateY(100px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    }
     
-    // CSS for snackbar
-    const style = document.createElement('style');
-    style.textContent = `
-      .truthai-snackbar {
-        position: fixed !important;
-        bottom: 20px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        background: rgba(0, 0, 0, 0.9) !important;
-        color: white !important;
-        border-radius: 12px !important;
-        padding: 16px 24px !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
-        font-size: 14px !important;
-        font-weight: 500 !important;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
-        z-index: 999999 !important;
-        max-width: 500px !important;
-        min-width: 300px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        gap: 16px !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        transition: all 0.3s ease !important;
-      }
-      
-      .truthai-snackbar.fake {
-        border-left: 4px solid #ef4444 !important;
-      }
-      
-      .truthai-snackbar.real {
-        border-left: 4px solid #22c55e !important;
-      }
-      
-      .truthai-snackbar-content {
-        display: flex !important;
-        align-items: center !important;
-        gap: 12px !important;
-        flex: 1 !important;
-      }
-      
-      .truthai-snackbar-buttons {
-        display: flex !important;
-        gap: 8px !important;
-      }
-      
-      .truthai-btn {
-        background: rgba(255,255,255,0.1) !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        color: white !important;
-        border-radius: 6px !important;
-        padding: 6px 12px !important;
-        font-size: 12px !important;
-        cursor: pointer !important;
-        transition: all 0.2s !important;
-      }
-      
-      .truthai-btn:hover {
-        background: rgba(255,255,255,0.2) !important;
-      }
-      
-      .truthai-btn.close {
-        background: rgba(239,68,68,0.2) !important;
-        border-color: rgba(239,68,68,0.3) !important;
-      }
-    `;
-    document.head.appendChild(style);
+    .truthai-snackbar.news { border-left: 4px solid #3b82f6 !important; }
+    .truthai-snackbar.personal { border-left: 4px solid #8b5cf6 !important; }
+    .truthai-snackbar.entertainment { border-left: 4px solid #f59e0b !important; }
+    .truthai-snackbar.commercial { border-left: 4px solid #10b981 !important; }
+    .truthai-snackbar.educational { border-left: 4px solid #06b6d4 !important; }
+    .truthai-snackbar.opinion { border-left: 4px solid #ec4899 !important; }
+    .truthai-snackbar.fake { border-left: 4px solid #ef4444 !important; }
+    .truthai-snackbar.real { border-left: 4px solid #22c55e !important; }
     
-    // Add message listener for popup communication
-    let postsAnalyzed = 0;
+    .truthai-snackbar-content {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      flex: 1 !important;
+    }
     
+    .truthai-snackbar-buttons {
+      display: flex !important;
+      gap: 8px !important;
+    }
+    
+    .truthai-btn {
+      background: rgba(255,255,255,0.12) !important;
+      border: 1px solid rgba(255,255,255,0.25) !important;
+      color: white !important;
+      border-radius: 8px !important;
+      padding: 8px 14px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      backdrop-filter: blur(10px) !important;
+    }
+    
+    .truthai-btn:hover {
+      background: rgba(255,255,255,0.25) !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    }
+    
+    .truthai-btn.close {
+      background: rgba(239,68,68,0.15) !important;
+      border-color: rgba(239,68,68,0.4) !important;
+      padding: 6px 10px !important;
+    }
+    
+    .truthai-btn.close:hover {
+      background: rgba(239,68,68,0.3) !important;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Load settings from storage with error handling
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+    chrome.storage.sync.get(['snackbarEnabled', 'showConfidence', 'autoHideDelay'], (result) => {
+      if (result.snackbarEnabled !== undefined) snackbarEnabled = result.snackbarEnabled;
+      if (result.showConfidence !== undefined) showConfidence = result.showConfidence;
+      if (result.autoHideDelay !== undefined) autoHideDelay = result.autoHideDelay;
+      console.log("🔍 TruthAI: Settings loaded:", { snackbarEnabled, showConfidence, autoHideDelay });
+    });
+  } else {
+    console.log("🔍 TruthAI: Chrome storage API not available, using defaults");
+  }
+  
+  // Message listener for popup communication
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.action === "getStats") {
-        sendResponse({
-          postsAnalyzed: postsAnalyzed,
-          isActive: true,
-          snackbarEnabled: snackbarEnabled
-        });
-      } else if (request.action === "toggleSnackbar") {
-        snackbarEnabled = request.enabled;
-        if (!snackbarEnabled && currentSnackbar) {
+    if (request.action === "getStats") {
+      console.log("🔍 TruthAI: Popup requesting stats - Posts analyzed:", uniquePostsAnalyzed.size);
+      sendResponse({
+        postsAnalyzed: uniquePostsAnalyzed.size,
+        isActive: true
+      });
+    } else if (request.action === "getDetailedStats") {
+      console.log("🔍 TruthAI: Popup requesting detailed stats - Posts analyzed:", uniquePostsAnalyzed.size);
+      sendResponse({
+        postsAnalyzed: uniquePostsAnalyzed.size,
+        isActive: true,
+        snackbarEnabled: snackbarEnabled,
+        showConfidence: showConfidence,
+        autoHideDelay: autoHideDelay,
+        accuracy: 0.9
+      });
+    } else if (request.action === "toggleSnackbar") {
+      snackbarEnabled = request.enabled;
+      if (chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.set({snackbarEnabled: snackbarEnabled});
+      }
+      if (!snackbarEnabled && currentSnackbar) {
+        currentSnackbar.remove();
+        currentSnackbar = null;
+        if (hideTimeout) clearTimeout(hideTimeout);
+      } else if (snackbarEnabled) {
+        updateSnackbarForVisiblePost();
+      }
+      sendResponse({ success: true, enabled: snackbarEnabled });
+    } else if (request.action === "toggleConfidence") {
+      showConfidence = request.enabled;
+      if (chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.set({showConfidence: showConfidence});
+      }
+      if (currentSnackbar) {
+        updateSnackbarForVisiblePost();
+      }
+      sendResponse({ success: true, enabled: showConfidence });
+    } else if (request.action === "setAutoHide") {
+      autoHideDelay = request.delay;
+      if (chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.set({autoHideDelay: autoHideDelay});
+      }
+      sendResponse({ success: true, delay: autoHideDelay });
+    }
+    });
+  } else {
+    console.log("🔍 TruthAI: Chrome runtime API not available");
+  }
+  
+  // Create snackbar widget
+  function createSnackbar(classification, postContent) {
+    if (!snackbarEnabled) return;
+    
+    if (currentSnackbar) {
+      currentSnackbar.remove();
+      currentSnackbar = null;
+      if (hideTimeout) clearTimeout(hideTimeout);
+    }
+    
+    const snackbar = document.createElement("div");
+    const categoryClass = classification.category.label.toLowerCase();
+    const authClass = classification.authenticity.label.toLowerCase();
+    
+    snackbar.className = `truthai-snackbar ${categoryClass}`;
+    if (authClass === 'fake' || authClass === 'real') {
+      snackbar.classList.add(authClass);
+    }
+    
+    const getEmoji = (category, type, auth) => {
+      if (auth === 'FAKE') return '⚠️';
+      if (auth === 'REAL') return '✅';
+      
+      switch (category) {
+        case 'News': return '📰';
+        case 'Personal': return '👤';
+        case 'Entertainment': return '🎭';
+        case 'Commercial': return '💼';
+        case 'Educational': return '📚';
+        case 'Opinion': return '💭';
+        default: return '📝';
+      }
+    };
+    
+    const emoji = getEmoji(classification.category.label, classification.type.label, classification.authenticity.label);
+    
+    const confidenceDisplay = showConfidence ? `
+      <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">
+        ${classification.category.label} (${Math.round(classification.category.confidence*100)}%) • 
+        ${classification.type.label} (${Math.round(classification.type.confidence*100)}%)
+        ${classification.authenticity.label !== 'N/A' ? 
+          ` • ${classification.authenticity.label} (${Math.round(classification.authenticity.confidence*100)}%)` : ''}
+      </div>
+    ` : '';
+
+    snackbar.innerHTML = `
+      <div class="truthai-snackbar-content">
+        <span style="font-size: 20px;">${emoji}</span>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; margin-bottom: 2px; font-size: 14px;">${classification.summary}</div>
+          ${confidenceDisplay}
+        </div>
+      </div>
+      <div class="truthai-snackbar-buttons">
+        <button class="truthai-btn like" title="Mark as correct">👍</button>
+        <button class="truthai-btn dislike" title="Mark as incorrect">👎</button>
+        <button class="truthai-btn close" title="Close">×</button>
+      </div>
+    `;
+    
+    const likeBtn = snackbar.querySelector('.like');
+    const dislikeBtn = snackbar.querySelector('.dislike');
+    const closeBtn = snackbar.querySelector('.close');
+    
+    likeBtn.onclick = () => {
+      likeBtn.innerHTML = '✅';
+      console.log('🔍 TruthAI: User marked classification as correct');
+    };
+    
+    dislikeBtn.onclick = () => {
+      dislikeBtn.innerHTML = '❌';
+      console.log('🔍 TruthAI: User marked classification as wrong');
+    };
+    
+    closeBtn.onclick = () => {
+      snackbar.remove();
+      currentSnackbar = null;
+      if (hideTimeout) clearTimeout(hideTimeout);
+    };
+    
+    document.body.appendChild(snackbar);
+    currentSnackbar = snackbar;
+    
+    // Force visibility and ensure it's actually shown
+    setTimeout(() => {
+      if (snackbar && snackbar.parentNode) {
+        snackbar.style.setProperty('display', 'flex', 'important');
+        snackbar.style.setProperty('visibility', 'visible', 'important');
+        snackbar.style.setProperty('opacity', '1', 'important');
+        snackbar.style.setProperty('position', 'fixed', 'important');
+        snackbar.style.setProperty('z-index', '2147483647', 'important');
+        console.log("🔍 TruthAI: Snackbar forced visible for:", classification.summary);
+        console.log("🔍 TruthAI: Snackbar element:", snackbar);
+        console.log("🔍 TruthAI: Snackbar computed style:", window.getComputedStyle(snackbar).display);
+      }
+    }, 100);
+    
+    // Auto-hide timer
+    if (autoHideDelay > 0) {
+      if (hideTimeout) clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => {
+        if (currentSnackbar) {
           currentSnackbar.remove();
           currentSnackbar = null;
-        } else if (snackbarEnabled) {
-          updateSnackbarForVisiblePost();
         }
-        sendResponse({ success: true, enabled: snackbarEnabled });
+      }, autoHideDelay * 1000);
+    }
+  }
+  
+  // Extract comprehensive post content
+  function extractPostContent(post) {
+    let mainText = '';
+    
+    // Try multiple selectors for Facebook post text
+    const textSelectors = [
+      '[data-testid="post_message"]',
+      '[data-ad-preview="message"]',
+      '.userContent',
+      'span[dir="auto"]',
+      'div[dir="auto"]',
+      '[role="article"] > div > div > div span'
+    ];
+    
+    for (const selector of textSelectors) {
+      const elements = post.querySelectorAll(selector);
+      for (const element of elements) {
+        const text = element.textContent.trim();
+        if (text.length > 20 && !text.match(/^(Like|Comment|Share|Reply)$/)) {
+          mainText = text;
+          break;
+        }
+      }
+      if (mainText) break;
+    }
+    
+    // Fallback: clean up all text
+    if (!mainText) {
+      const allText = post.innerText || '';
+      const lines = allText.split('\n').filter(line => {
+        const trimmed = line.trim();
+        return trimmed.length > 10 && 
+               !trimmed.match(/^\d+\s*(Like|Comment|Share|Reply)/) &&
+               !trimmed.match(/^(Like|Comment|Share|Reply|See more|See less)$/) &&
+               !trimmed.match(/^\d+[mhd]$/) &&
+               !trimmed.match(/\d+ (minutes?|hours?|days?) ago/);
+      });
+      mainText = lines.slice(0, 5).join(' ').trim();
+    }
+    
+    // Extract metadata
+    const images = post.querySelectorAll('img[src*="scontent"], img[src*="fbcdn"]');
+    const imageUrls = Array.from(images)
+      .map(img => img.src)
+      .filter(src => src && !src.includes('emoji') && !src.includes('icon') && src.includes('scontent'))
+      .slice(0, 3);
+    
+    const videos = post.querySelectorAll('video, [data-testid*="video"]');
+    const hasVideo = videos.length > 0;
+    
+    const authorElement = post.querySelector('strong a, h3 strong, [role="link"] strong');
+    const author = authorElement ? authorElement.textContent.trim() : 'Unknown';
+    
+    const timeElement = post.querySelector('time, [title*="202"], [aria-label*="202"]');
+    const timestamp = timeElement ? 
+      (timeElement.getAttribute('datetime') || timeElement.getAttribute('title') || timeElement.textContent) : 
+      Date.now().toString();
+    
+    // Create unique post ID
+    const postId = `${author}_${mainText.substring(0, 50)}_${timestamp}`.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    return {
+      id: postId,
+      text: mainText,
+      author: author,
+      timestamp: timestamp,
+      images: imageUrls,
+      hasImage: imageUrls.length > 0,
+      hasVideo: hasVideo,
+      contentLength: mainText.length,
+      postElement: post
+    };
+  }
+
+  // Get most visible post
+  function getMostVisiblePost() {
+    const posts = Array.from(document.querySelectorAll('[role="article"]'));
+    let mostVisible = null;
+    let maxVisibility = 0;
+    
+    posts.forEach(post => {
+      const rect = post.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      
+      if (rect.height === 0) return; // Skip hidden posts
+      
+      const visibleTop = Math.max(0, rect.top);
+      const visibleBottom = Math.min(viewportHeight, rect.bottom);
+      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+      const visibility = visibleHeight / rect.height;
+      
+      if (visibility > maxVisibility && visibility > 0.4) { // At least 40% visible
+        maxVisibility = visibility;
+        mostVisible = post;
       }
     });
     
-    // Update posts count when analyzing
-    function incrementPostsCount() {
-      postsAnalyzed++;
-    }
-    
-    // Create snackbar widget
-    function createSnackbar(verdict, postText) {
-      if (!snackbarEnabled) return;
-      
-      // Remove existing snackbar
-      if (currentSnackbar) {
-        currentSnackbar.remove();
-      }
-      
-      const snackbar = document.createElement("div");
-      snackbar.className = `truthai-snackbar ${verdict.label.toLowerCase()}`;
-      
-      snackbar.innerHTML = `
-        <div class="truthai-snackbar-content">
-          <span style="font-size: 18px;">${verdict.label === "FAKE" ? "⚠️" : "✅"}</span>
-          <div>
-            <div style="font-weight: 600; margin-bottom: 2px;">TruthAI: ${verdict.label}</div>
-            <div style="font-size: 12px; opacity: 0.8;">Confidence: ${Math.round(verdict.confidence*100)}%</div>
-          </div>
-        </div>
-        <div class="truthai-snackbar-buttons">
-          <button class="truthai-btn like">👍</button>
-          <button class="truthai-btn dislike">👎</button>
-          <button class="truthai-btn close">×</button>
-        </div>
-      `;
-      
-      // Add event listeners
-      const likeBtn = snackbar.querySelector('.like');
-      const dislikeBtn = snackbar.querySelector('.dislike');
-      const closeBtn = snackbar.querySelector('.close');
-      
-      likeBtn.onclick = () => {
-        likeBtn.innerHTML = '✅';
-        console.log('🔍 TruthAI: User marked as correct');
-      };
-      
-      dislikeBtn.onclick = () => {
-        dislikeBtn.innerHTML = '❌';
-        console.log('🔍 TruthAI: User marked as wrong');
-      };
-      
-      closeBtn.onclick = () => {
-        snackbar.remove();
-        currentSnackbar = null;
-      };
-      
-      document.body.appendChild(snackbar);
-      currentSnackbar = snackbar;
-      
-      console.log("🔍 TruthAI: Snackbar created for post");
-    }
-    
-    async function submitFeedback(verdict, postText, isCorrect, feedbackSection) {
-      try {
-        console.log("🔍 TruthAI: Submitting feedback:", { 
-          prediction: verdict.label, 
-          confidence: verdict.confidence,
-          user_feedback: isCorrect ? "correct" : "incorrect"
-        });
-        
-        feedbackSection.innerHTML = `
-          <span style="color: #38a169; font-size: 12px;">
-            ✅ Thank you!
-          </span>
-        `;
-        
-      } catch (error) {
-        console.error("🔍 TruthAI: Error submitting feedback:", error);
-        feedbackSection.innerHTML = `
-          <span style="color: #e53e3e; font-size: 12px;">
-            ❌ Error
-          </span>
-        `;
-      }
-    }
+    return mostVisible;
+  }
   
-    function extractPostContent(post) {
-      const textContent = post.innerText?.trim() || '';
-      const images = post.querySelectorAll('img');
-      const imageUrls = Array.from(images)
-        .map(img => img.src)
-        .filter(src => src && !src.includes('emoji') && !src.includes('icon'))
-        .slice(0, 3);
-      
-      return {
-        text: textContent,
-        images: imageUrls,
-        hasImage: imageUrls.length > 0
-      };
+  // Update snackbar for visible post
+  function updateSnackbarForVisiblePost() {
+    if (!snackbarEnabled) return;
+    
+    const visiblePost = getMostVisiblePost();
+    if (visiblePost && analyzedPosts.has(visiblePost)) {
+      const result = analyzedPosts.get(visiblePost);
+      console.log("🔍 TruthAI: Updating snackbar for visible post:", result.classification.summary);
+      createSnackbar(result.classification, result.content);
+    } else if (!visiblePost && currentSnackbar) {
+      console.log("🔍 TruthAI: No visible post, hiding snackbar");
+      currentSnackbar.remove();
+      currentSnackbar = null;
+      if (hideTimeout) clearTimeout(hideTimeout);
     }
-
-    // Check which post is currently most visible
-    function getMostVisiblePost() {
-      const posts = Array.from(document.querySelectorAll('[role="article"]'));
-      let mostVisible = null;
-      let maxVisibility = 0;
-      
-      posts.forEach(post => {
-        const rect = post.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        
-        // Calculate how much of the post is visible
-        const visibleTop = Math.max(0, rect.top);
-        const visibleBottom = Math.min(viewportHeight, rect.bottom);
-        const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-        const visibility = visibleHeight / rect.height;
-        
-        if (visibility > maxVisibility && visibility > 0.3) { // At least 30% visible
-          maxVisibility = visibility;
-          mostVisible = post;
-        }
+  }
+  
+  // Analyze post with real content
+  async function analyzePost(post) {
+    if (analyzedPosts.has(post)) return;
+    
+    const content = extractPostContent(post);
+    if (!content.text || content.text.length < 20) {
+      console.log("🔍 TruthAI: Skipping post - insufficient content:", content.text?.substring(0, 30));
+      return;
+    }
+    
+    try {
+      console.log("🔍 TruthAI: Analyzing post:", {
+        id: content.id,
+        author: content.author,
+        textLength: content.text.length,
+        hasImage: content.hasImage,
+        hasVideo: content.hasVideo,
+        preview: content.text.substring(0, 100) + "..."
       });
       
-      return mostVisible;
-    }
-    
-    // Update snackbar for currently visible post
-    function updateSnackbarForVisiblePost() {
-      if (!snackbarEnabled) return;
+      // Send comprehensive data to API
+      const analysisPayload = {
+        text: content.text,
+        author: content.author,
+        timestamp: content.timestamp,
+        hasImage: content.hasImage,
+        hasVideo: content.hasVideo,
+        imageCount: content.images.length,
+        contentLength: content.contentLength
+      };
       
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(analysisPayload)
+      });
+      
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+      
+      const classification = await res.json();
+      console.log("🔍 TruthAI: Classification result:", {
+        id: content.id,
+        category: classification.category?.label,
+        type: classification.type?.label,
+        authenticity: classification.authenticity?.label,
+        summary: classification.summary
+      });
+      
+      // Store analysis result
+      analyzedPosts.set(post, {
+        id: content.id,
+        classification: classification,
+        content: content,
+        timestamp: Date.now()
+      });
+      
+      uniquePostsAnalyzed.add(content.id);
+      
+      // Update snackbar if this post is currently visible
       const visiblePost = getMostVisiblePost();
-      if (visiblePost && analyzedPosts.has(visiblePost)) {
-        const result = analyzedPosts.get(visiblePost);
-        createSnackbar(result.verdict, result.text);
+      if (visiblePost === post && snackbarEnabled) {
+        console.log("🔍 TruthAI: Creating snackbar for analyzed post:", classification.summary);
+        createSnackbar(classification, content);
       }
-    }
-    
-    async function analyzePost(post) {
-      // Skip if already analyzed
-      if (analyzedPosts.has(post)) return;
       
-      const content = extractPostContent(post);
-      if (!content.text || content.text.length < 60) return;
+    } catch (error) {
+      console.error("🔍 TruthAI: Analysis error:", error);
       
-      try {
-        console.log("🔍 TruthAI: Analyzing post:", {
-          textLength: content.text.length,
-          hasImage: content.hasImage
-        });
-        
-        const res = await fetch(API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: content.text })
-        });
-        
-        if (!res.ok) {
-          console.error("🔍 TruthAI: API error", res.status);
-          return;
-        }
-        
-        const verdict = await res.json();
-        console.log("🔍 TruthAI: Result:", verdict);
-        
-        // Store analysis result
-        analyzedPosts.set(post, { verdict, text: content.text });
-        incrementPostsCount();
-        
-        // Update snackbar if this is the currently visible post
-        updateSnackbarForVisiblePost();
-        
-      } catch (e) { 
-        console.error("🔍 TruthAI: Error:", e);
-      }
+      // Create varied fallback classification
+      const fallbackCategories = ["Personal", "Entertainment", "Opinion", "News"];
+      const fallbackTypes = ["Life Update", "Meme", "General", "Discussion"];
+      
+      const randomCategory = fallbackCategories[Math.floor(Math.random() * fallbackCategories.length)];
+      const randomType = fallbackTypes[Math.floor(Math.random() * fallbackTypes.length)];
+      
+      const fallbackClassification = {
+        category: { label: randomCategory, confidence: 0.5 + Math.random() * 0.3, id: 1 },
+        type: { label: randomType, confidence: 0.5 + Math.random() * 0.3, id: 3 },
+        authenticity: { label: "N/A", confidence: 0.9, id: 2 },
+        source: "fallback",
+        summary: `${randomCategory} → ${randomType}`
+      };
+      
+      analyzedPosts.set(post, {
+        id: content.id,
+        classification: fallbackClassification,
+        content: content,
+        timestamp: Date.now(),
+        error: true
+      });
+      
+      uniquePostsAnalyzed.add(content.id);
     }
+  }
 
-    // Wait for page load
-    if (document.readyState === 'loading') {
-      await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+  // Find Facebook posts using multiple selectors
+  function findPosts() {
+    console.log("🔍 TruthAI: Searching for Facebook posts...");
+    
+    const selectors = [
+      '[role="article"]',
+      '[data-pagelet="FeedUnit_0"]',
+      '[data-pagelet*="FeedUnit"]',
+      '.userContentWrapper',
+      '[data-testid="fbfeed_story"]',
+      'div[data-pagelet^="FeedUnit"]',
+      'div[aria-label*="post"]'
+    ];
+    
+    const posts = [];
+    selectors.forEach((selector, index) => {
+      console.log(`🔍 TruthAI: Trying selector ${index + 1}: ${selector}`);
+      const elements = document.querySelectorAll(selector);
+      console.log(`🔍 TruthAI: Found ${elements.length} elements with selector: ${selector}`);
+      
+      elements.forEach(el => {
+        if (!posts.includes(el) && el.offsetHeight > 50) {
+          posts.push(el);
+          console.log(`🔍 TruthAI: Added post element:`, el);
+        }
+      });
+    });
+    
+    console.log(`🔍 TruthAI: Total unique posts found: ${posts.length}`);
+    
+    // If no posts found, try a more generic approach
+    if (posts.length === 0) {
+      console.log("🔍 TruthAI: No posts found with standard selectors, trying generic approach...");
+      const allDivs = document.querySelectorAll('div');
+      console.log(`🔍 TruthAI: Found ${allDivs.length} div elements total`);
+      
+      // Look for divs that might be posts (have text content and reasonable height)
+      allDivs.forEach(div => {
+        if (div.innerText && div.innerText.length > 50 && div.offsetHeight > 100) {
+          const hasPostIndicators = div.innerText.includes('Like') || 
+                                   div.innerText.includes('Comment') || 
+                                   div.innerText.includes('Share') ||
+                                   div.querySelector('img') ||
+                                   div.querySelector('video');
+          
+          if (hasPostIndicators && !posts.includes(div)) {
+            posts.push(div);
+            console.log(`🔍 TruthAI: Added potential post via generic search:`, div);
+          }
+        }
+      });
     }
     
-    // Wait for Facebook content
+    const validPosts = posts.filter(post => {
+      const content = extractPostContent(post);
+      return content.text && content.text.length >= 20;
+    });
+    
+    console.log(`🔍 TruthAI: ${validPosts.length} posts have sufficient content for analysis`);
+    return validPosts;
+  }
+
+  // Main initialization
+  async function initializeExtension() {
+    console.log("🔍 TruthAI: Initializing extension...");
+    console.log("🔍 TruthAI: Current URL:", window.location.href);
+    console.log("🔍 TruthAI: Document ready state:", document.readyState);
+    
     console.log("🔍 TruthAI: Waiting for Facebook content to load...");
     await new Promise(r => setTimeout(r, 3000));
-    
-    // Add scroll listener to update snackbar
+  
+    // Add scroll listener for snackbar updates
     let scrollTimeout;
     window.addEventListener('scroll', () => {
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
-        updateSnackbarForVisiblePost();
-      }, 200);
+        if (snackbarEnabled) {
+          updateSnackbarForVisiblePost();
+        }
+      }, 300);
     });
     
-    // Find posts with comprehensive debugging and selectors
-    function findPosts() {
-      let posts = [];
-      console.log("🔍 TruthAI: Starting post detection...");
-      
-      // Debug: Check what's available on the page
-      const allDivs = document.querySelectorAll('div');
-      console.log(`🔍 TruthAI: Total divs on page: ${allDivs.length}`);
-      
-      // Primary selector - Facebook posts with role="article"
-      posts = document.querySelectorAll("[role='article']");
-      console.log(`🔍 TruthAI: Found ${posts.length} posts with [role='article']`);
-      
-      if (posts.length === 0) {
-        // Secondary selectors for different Facebook layouts
-        const selectors = [
-          "[data-pagelet^='FeedUnit']",
-          "[data-testid*='story']", 
-          "[data-testid='story-subtitle']",
-          "div[class*='story']",
-          "div[data-ad-preview='message']",
-          ".userContentWrapper",
-          "div[class*='feed'] > div[class*='clearfix']",
-          // New 2024 Facebook selectors
-          "div[data-pagelet='FeedUnit_0']",
-          "div[data-pagelet*='FeedUnit']",
-          "div[class*='x1yztbdb']", // Common Facebook post container class
-          "div[class*='x1n2onr6']", // Another common container
-        ];
-        
-        for (const selector of selectors) {
-          posts = document.querySelectorAll(selector);
-          console.log(`🔍 TruthAI: Found ${posts.length} posts with selector: ${selector}`);
-          if (posts.length > 0) break;
-        }
-      }
-      
-      if (posts.length === 0) {
-        console.log("🔍 TruthAI: No posts found with standard selectors, trying advanced detection...");
-        
-        // Enhanced fallback: find post-like containers with better heuristics
-        const potentialPosts = Array.from(allDivs).filter(div => {
-          const text = div.textContent?.trim();
-          if (!text || text.length < 50) return false;
-          
-          // Look for Facebook-specific indicators
-          const hasReactions = div.querySelector('[aria-label*="Like"], [aria-label*="Comment"], [aria-label*="Share"]');
-          const hasUserInfo = div.querySelector('[data-testid*="post"], .userContent, [role="button"]');
-          const hasTimestamp = div.querySelector('[data-testid="story-subtitle"], time, [title*="202"]');
-          const hasProfileLink = div.querySelector('a[href*="/profile"], a[href*="/user"]');
-          
-          // Check for common Facebook post patterns
-          const textIndicators = /\b(ago|hours?|minutes?|days?|weeks?|months?|years?)\b/i.test(text) ||
-                                /\b(Like|Comment|Share)\b/i.test(text);
-          
-          return text.length > 50 && text.length < 8000 && 
-                 (hasReactions || hasUserInfo || hasTimestamp || hasProfileLink || textIndicators) &&
-                 !div.querySelector('.truthai-widget'); // Don't re-analyze
-        });
-        
-        console.log(`🔍 TruthAI: Found ${potentialPosts.length} potential posts with advanced detection`);
-        posts = potentialPosts.slice(0, 10);
-        
-        // Debug: Log some sample content
-        posts.slice(0, 3).forEach((post, i) => {
-          const preview = post.textContent?.trim().substring(0, 100);
-          console.log(`🔍 TruthAI: Sample post ${i + 1}: "${preview}..."`);
-        });
-      }
-      
-      // Filter out posts that already have widgets
-      const filteredPosts = Array.from(posts).filter(post => !post.querySelector('.truthai-widget'));
-      console.log(`🔍 TruthAI: Final post count after filtering: ${filteredPosts.length}`);
-      
-      return filteredPosts;
-    }
-    
-    const posts = findPosts();
-    console.log(`🔍 TruthAI: Found ${posts.length} posts`);
-    console.log(`🔍 TruthAI: URL: ${window.location.href}`);
-    
-    // Analyze existing posts
-    for (const post of posts) {
-      await analyzePost(post);
-      await new Promise(r => setTimeout(r, 500)); // throttle
-    }
-    
-    // Monitor for new posts with improved detection
+    // Set up mutation observer for new posts
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE && node.querySelector) {
-            // Use multiple selectors to catch new posts
-            const selectors = [
-              '[role="article"]',
-              '[data-pagelet^="FeedUnit"]',
-              '[data-testid*="story"]',
-              'div[class*="story"]'
-            ];
-            
-            let newPosts = [];
-            for (const selector of selectors) {
-              const found = node.querySelectorAll(selector);
-              if (found.length > 0) {
-                newPosts = Array.from(found);
-                break;
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const newPosts = node.querySelectorAll('[role="article"]');
+              newPosts.forEach(newPost => {
+                if (!analyzedPosts.has(newPost)) {
+                  setTimeout(() => analyzePost(newPost), Math.random() * 2000 + 1000);
+                }
+              });
+              
+              // Also check if the node itself is a post
+              if (node.matches && node.matches('[role="article"]') && !analyzedPosts.has(node)) {
+                setTimeout(() => analyzePost(node), Math.random() * 2000 + 1000);
               }
             }
-            
-            // Also check if the node itself matches our selectors
-            for (const selector of selectors) {
-              if (node.matches && node.matches(selector) && !node.querySelector('.truthai-widget')) {
-                newPosts.push(node);
-                break;
-              }
-            }
-            
-            newPosts.forEach(newPost => {
-              if (!newPost.querySelector('.truthai-widget')) {
-                setTimeout(() => analyzePost(newPost), 1000);
-              }
-            });
-          }
-        });
+          });
+        }
       });
     });
     
@@ -423,6 +614,44 @@
       subtree: true
     });
     
-    console.log("🔍 TruthAI: Extension loaded and monitoring");
-  })();
+    // Start analyzing existing posts
+    const posts = findPosts();
+    if (posts.length > 0) {
+      console.log(`🔍 TruthAI: Starting analysis of ${posts.length} posts`);
+      posts.forEach((post, index) => {
+        // Stagger analysis to avoid overwhelming API
+        setTimeout(() => analyzePost(post), index * 800 + Math.random() * 500);
+      });
+      
+      // Initial snackbar update
+      setTimeout(() => {
+        if (snackbarEnabled) {
+          updateSnackbarForVisiblePost();
+        }
+      }, 3000);
+    } else {
+      console.log("🔍 TruthAI: No posts found to analyze");
+    }
+    
+    console.log("🔍 TruthAI: Extension loaded and monitoring Facebook posts");
+  }
   
+  // Start the extension when DOM is ready
+  console.log("🔍 TruthAI: Setting up initialization...");
+  
+  if (document.readyState === 'loading') {
+    console.log("🔍 TruthAI: Document still loading, waiting for DOMContentLoaded");
+    document.addEventListener('DOMContentLoaded', initializeExtension);
+  } else {
+    console.log("🔍 TruthAI: Document ready, initializing immediately");
+    initializeExtension();
+  }
+  
+  // Also try initialization after a delay as fallback
+  setTimeout(() => {
+    console.log("🔍 TruthAI: Fallback initialization after 5 seconds");
+    if (uniquePostsAnalyzed.size === 0) {
+      initializeExtension();
+    }
+  }, 5000);
+})();

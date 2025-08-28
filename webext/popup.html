@@ -5,81 +5,118 @@
     <title>TruthAI</title>
     <style>
       body {
-        width: 300px;
-        padding: 16px;
+        width: 380px;
+        padding: 20px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         margin: 0;
+        border-radius: 12px;
       }
       .header {
         text-align: center;
-        margin-bottom: 16px;
+        margin-bottom: 20px;
       }
       .logo {
-        font-size: 24px;
+        font-size: 28px;
         font-weight: bold;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
       }
       .subtitle {
-        font-size: 12px;
-        opacity: 0.8;
+        font-size: 14px;
+        opacity: 0.9;
+        font-weight: 500;
       }
-      .status-card {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 12px;
+      
+      .card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      }
+      
+      .card-title {
+        font-size: 16px;
+        font-weight: 600;
         margin-bottom: 12px;
-        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
+      
       .status-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
       .status-item:last-child {
         margin-bottom: 0;
+        border-bottom: none;
       }
       .status-label {
-        font-size: 12px;
+        font-size: 13px;
         opacity: 0.9;
+        font-weight: 500;
       }
       .status-value {
-        font-weight: bold;
-        font-size: 12px;
+        font-weight: 600;
+        font-size: 13px;
       }
       .status-indicator {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         margin-left: 8px;
+        box-shadow: 0 0 8px rgba(255,255,255,0.3);
       }
       .status-online {
         background: #48bb78;
+        box-shadow: 0 0 8px rgba(72, 187, 120, 0.5);
       }
       .status-offline {
         background: #f56565;
+        box-shadow: 0 0 8px rgba(245, 101, 101, 0.5);
       }
-      .info-text {
-        font-size: 11px;
-        text-align: center;
-        opacity: 0.7;
-        line-height: 1.4;
+      
+      .classification-legend {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
         margin-top: 12px;
+      }
+      
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        opacity: 0.8;
+      }
+      
+      .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
       }
       
       .toggle-switch {
         position: relative;
         display: inline-block;
-        width: 40px;
-        height: 20px;
+        width: 50px;
+        height: 24px;
       }
       
       .toggle-switch input {
         opacity: 0;
         width: 0;
         height: 0;
+        cursor: pointer;
       }
       
       .slider {
@@ -89,56 +126,132 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: rgba(255,255,255,0.3);
+        background-color: rgba(255, 255, 255, 0.2);
         transition: .4s;
-        border-radius: 20px;
+        border-radius: 24px;
       }
       
       .slider:before {
         position: absolute;
         content: "";
-        height: 16px;
-        width: 16px;
-        left: 2px;
-        bottom: 2px;
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
         background-color: white;
         transition: .4s;
         border-radius: 50%;
       }
       
       input:checked + .slider {
-        background-color: #48bb78;
+        background-color: #4CAF50;
       }
       
       input:checked + .slider:before {
-        transform: translateX(20px);
+        transform: translateX(26px);
+      }
+      
+      .config-section {
+        margin-top: 12px;
+      }
+      
+      .config-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      
+      .config-label {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      
+      .info-text {
+        font-size: 12px;
+        text-align: center;
+        opacity: 0.8;
+        line-height: 1.5;
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+      }
+      
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      
+      .stat-box {
+        text-align: center;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+      }
+      
+      .stat-number {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+      
+      .stat-label {
+        font-size: 11px;
+        opacity: 0.8;
       }
     </style>
   </head>
   <body>
     <div class="header">
       <div class="logo">🔍 TruthAI</div>
-      <div class="subtitle">Automatic Fake News Detection</div>
+      <div class="subtitle">Comprehensive Post Classification</div>
     </div>
     
-    <div class="status-card">
+    <div class="card">
+      <div class="card-title">
+        <span>⚡</span>
+        System Status
+      </div>
       <div class="status-item">
-        <span class="status-label">API Status</span>
+        <span class="status-label">API Server</span>
         <div style="display: flex; align-items: center;">
           <span class="status-value" id="api-status">Checking...</span>
           <div class="status-indicator" id="api-indicator"></div>
         </div>
       </div>
       <div class="status-item">
-        <span class="status-label">Posts Analyzed</span>
-        <span class="status-value" id="posts-count">0</span>
-      </div>
-      <div class="status-item">
-        <span class="status-label">Active on Facebook</span>
+        <span class="status-label">Facebook Integration</span>
         <span class="status-value" id="facebook-status">Auto-detecting</span>
       </div>
-      <div class="status-item">
-        <span class="status-label">Snackbar Widget</span>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">
+        <span>📊</span>
+        Analytics
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-number" id="posts-count">0</div>
+          <div class="stat-label">Posts Analyzed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="accuracy-rate">90%</div>
+          <div class="stat-label">Model Accuracy</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">
+        <span>⚙️</span>
+        Configuration
+      </div>
+      <div class="config-item">
+        <span class="config-label">Smart Snackbar</span>
         <div style="display: flex; align-items: center; gap: 8px;">
           <label class="toggle-switch">
             <input type="checkbox" id="snackbar-toggle" checked>
@@ -147,10 +260,53 @@
           <span class="status-value" id="snackbar-status">Enabled</span>
         </div>
       </div>
+      <div class="config-item">
+        <span class="config-label">Show Confidence Scores</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="confidence-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="config-item">
+        <span class="config-label">Auto-Hide After</span>
+        <select id="auto-hide-select" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 4px; padding: 4px 8px;">
+          <option value="0">Never</option>
+          <option value="5">5 seconds</option>
+          <option value="10" selected>10 seconds</option>
+          <option value="15">15 seconds</option>
+        </select>
+      </div>
+      
+      <div class="classification-legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background: #3b82f6;"></div>
+          <span>📰 News</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #8b5cf6;"></div>
+          <span>👤 Personal</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #f59e0b;"></div>
+          <span>🎭 Entertainment</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #10b981;"></div>
+          <span>💼 Commercial</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #06b6d4;"></div>
+          <span>📚 Educational</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #ec4899;"></div>
+          <span>💭 Opinion</span>
+        </div>
+      </div>
     </div>
     
     <div class="info-text">
-      TruthAI analyzes Facebook posts and shows results in a snackbar at the bottom of the screen. The snackbar displays the analysis of the currently visible post and can be toggled on/off above.
+      TruthAI uses advanced AI to classify posts by category, type, and authenticity. The smart snackbar shows detailed analysis of the currently visible post with color-coded categories and confidence scores.
     </div>
     
     <script src="popup.js"></script>

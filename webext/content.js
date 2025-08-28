@@ -11,6 +11,7 @@
   let analyzedPosts = new Map();
   let hideTimeout = null;
   let uniquePostsAnalyzed = new Set();
+  let embeddedBadges = new Set();
   
   console.log("🔍 TruthAI: Content script starting...");
   
@@ -22,96 +23,324 @@
   
   console.log("🔍 TruthAI: On Facebook, initializing extension");
   
-  // CSS for snackbar
+  // Enhanced CSS matching popup.html design system
   const style = document.createElement('style');
   style.textContent = `
+    :root {
+      --truthai-primary: #3b82f6;
+      --truthai-secondary: #6b7280;
+      --truthai-success: #22c55e;
+      --truthai-warning: #f59e0b;
+      --truthai-error: #ef4444;
+      --truthai-surface: #ffffff;
+      --truthai-surface-light: #f9fafb;
+      --truthai-surface-dark: #1f2937;
+      --truthai-text: #111827;
+      --truthai-text-secondary: #374151;
+      --truthai-text-muted: #6b7280;
+      --truthai-border: #e5e7eb;
+      --truthai-border-light: #f3f4f6;
+      --truthai-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --truthai-shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Modern Card-Style Snackbar */
     .truthai-snackbar {
       position: fixed !important;
-      bottom: 20px !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-      background: rgba(0, 0, 0, 0.95) !important;
-      color: white !important;
-      border-radius: 16px !important;
-      padding: 18px 24px !important;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+      bottom: 24px !important;
+      right: 24px !important;
+      background: var(--truthai-surface) !important;
+      color: var(--truthai-text) !important;
+      border-radius: 12px !important;
+      padding: 24px !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
       font-size: 14px !important;
       font-weight: 500 !important;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1) !important;
+      box-shadow: var(--truthai-shadow) !important;
+      border: 1px solid var(--truthai-border) !important;
       z-index: 2147483647 !important;
-      max-width: 550px !important;
-      min-width: 350px !important;
+      max-width: 420px !important;
+      min-width: 360px !important;
       display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      gap: 18px !important;
-      backdrop-filter: blur(20px) !important;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      align-items: flex-start !important;
+      gap: 16px !important;
+      transition: all 0.2s ease !important;
+      animation: truthai-slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
       visibility: visible !important;
       opacity: 1 !important;
       pointer-events: auto !important;
     }
     
-    @keyframes slideUp {
+    @keyframes truthai-slideIn {
       from {
-        transform: translateX(-50%) translateY(100px);
+        transform: translateX(100%) translateY(20px);
         opacity: 0;
       }
       to {
-        transform: translateX(-50%) translateY(0);
+        transform: translateX(0) translateY(0);
         opacity: 1;
       }
     }
+
+    /* Card hover effect matching popup */
+    .truthai-snackbar:hover {
+      background: var(--truthai-surface-light) !important;
+      border-color: #d1d5db !important;
+      transform: translateY(-2px) !important;
+    }
     
-    .truthai-snackbar.news { border-left: 4px solid #3b82f6 !important; }
-    .truthai-snackbar.personal { border-left: 4px solid #8b5cf6 !important; }
-    .truthai-snackbar.entertainment { border-left: 4px solid #f59e0b !important; }
-    .truthai-snackbar.commercial { border-left: 4px solid #10b981 !important; }
-    .truthai-snackbar.educational { border-left: 4px solid #06b6d4 !important; }
-    .truthai-snackbar.opinion { border-left: 4px solid #ec4899 !important; }
-    .truthai-snackbar.fake { border-left: 4px solid #ef4444 !important; }
-    .truthai-snackbar.real { border-left: 4px solid #22c55e !important; }
-    
-    .truthai-snackbar-content {
+    /* Icon container matching popup card icons */
+    .truthai-snackbar-icon {
+      width: 40px !important;
+      height: 40px !important;
+      border-radius: 8px !important;
       display: flex !important;
       align-items: center !important;
-      gap: 12px !important;
-      flex: 1 !important;
+      justify-content: center !important;
+      font-size: 20px !important;
+      color: white !important;
+      flex-shrink: 0 !important;
     }
+
+    /* Category-specific icon backgrounds matching popup legend */
+    .truthai-snackbar.news .truthai-snackbar-icon { background: #3b82f6 !important; }
+    .truthai-snackbar.personal .truthai-snackbar-icon { background: #8b5cf6 !important; }
+    .truthai-snackbar.entertainment .truthai-snackbar-icon { background: #f59e0b !important; }
+    .truthai-snackbar.commercial .truthai-snackbar-icon { background: #10b981 !important; }
+    .truthai-snackbar.educational .truthai-snackbar-icon { background: #06b6d4 !important; }
+    .truthai-snackbar.opinion .truthai-snackbar-icon { background: #ec4899 !important; }
+    .truthai-snackbar.fake .truthai-snackbar-icon { background: #ef4444 !important; }
+    .truthai-snackbar.real .truthai-snackbar-icon { background: #22c55e !important; }
     
-    .truthai-snackbar-buttons {
+    .truthai-snackbar-content {
+      flex: 1 !important;
       display: flex !important;
+      flex-direction: column !important;
       gap: 8px !important;
     }
+
+    /* Title matching popup card titles */
+    .truthai-snackbar-title {
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      color: var(--truthai-text) !important;
+      margin: 0 !important;
+      line-height: 1.4 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+    }
+
+    /* Subtitle matching popup stat labels */
+    .truthai-snackbar-subtitle {
+      font-size: 14px !important;
+      color: var(--truthai-text-muted) !important;
+      margin: 0 !important;
+      line-height: 1.3 !important;
+      font-weight: 500 !important;
+    }
+
+    /* Confidence display matching popup style */
+    .truthai-snackbar-confidence {
+      font-size: 12px !important;
+      color: var(--truthai-text-muted) !important;
+      margin-top: 8px !important;
+      padding: 6px 12px !important;
+      background: var(--truthai-surface-light) !important;
+      border: 1px solid var(--truthai-border) !important;
+      border-radius: 6px !important;
+      display: inline-block !important;
+      font-weight: 500 !important;
+    }
+
+    /* Brand label matching popup info style */
+    .truthai-brand {
+      font-size: 10px !important;
+      color: var(--truthai-text-muted) !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.5px !important;
+      font-weight: 600 !important;
+      margin-top: 8px !important;
+    }
     
+    .truthai-snackbar-actions {
+      display: flex !important;
+      gap: 8px !important;
+      margin-top: 12px !important;
+    }
+    
+    /* Buttons matching popup toggle style */
     .truthai-btn {
-      background: rgba(255,255,255,0.12) !important;
-      border: 1px solid rgba(255,255,255,0.25) !important;
-      color: white !important;
-      border-radius: 8px !important;
-      padding: 8px 14px !important;
-      font-size: 13px !important;
+      background: white !important;
+      border: 1px solid var(--truthai-border) !important;
+      color: var(--truthai-text-secondary) !important;
+      border-radius: 6px !important;
+      padding: 8px 12px !important;
+      font-size: 14px !important;
       font-weight: 500 !important;
       cursor: pointer !important;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      backdrop-filter: blur(10px) !important;
+      transition: all 0.2s ease !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      min-width: 32px !important;
+      height: 32px !important;
     }
     
     .truthai-btn:hover {
-      background: rgba(255,255,255,0.25) !important;
-      transform: translateY(-1px) !important;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+      background: var(--truthai-surface-light) !important;
+      border-color: #d1d5db !important;
     }
-    
+
     .truthai-btn.close {
-      background: rgba(239,68,68,0.15) !important;
-      border-color: rgba(239,68,68,0.4) !important;
-      padding: 6px 10px !important;
+      color: var(--truthai-text-muted) !important;
+      font-size: 16px !important;
+      font-weight: 600 !important;
     }
-    
+
     .truthai-btn.close:hover {
-      background: rgba(239,68,68,0.3) !important;
+      color: var(--truthai-error) !important;
+      border-color: #fecaca !important;
+      background: #fef2f2 !important;
+    }
+
+    /* Action buttons with primary styling */
+    .truthai-btn.like:hover {
+      color: var(--truthai-success) !important;
+      border-color: #bbf7d0 !important;
+      background: #f0fdf4 !important;
+    }
+
+    .truthai-btn.dislike:hover {
+      color: var(--truthai-error) !important;
+      border-color: #fecaca !important;
+      background: #fef2f2 !important;
+    }
+
+    /* Embedded Post Badge - Mini Card Style */
+    .truthai-post-badge {
+      position: absolute !important;
+      top: 12px !important;
+      right: 12px !important;
+      background: var(--truthai-surface) !important;
+      border: 1px solid var(--truthai-border) !important;
+      border-radius: 8px !important;
+      padding: 8px 12px !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      color: var(--truthai-text) !important;
+      box-shadow: var(--truthai-shadow-card) !important;
+      z-index: 10 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      transition: all 0.2s ease !important;
+      opacity: 0.9 !important;
+      pointer-events: auto !important;
+    }
+
+    .truthai-post-badge:hover {
+      opacity: 1 !important;
+      background: var(--truthai-surface-light) !important;
+      border-color: #d1d5db !important;
+      transform: translateY(-1px) !important;
+    }
+
+    .truthai-badge-icon {
+      width: 16px !important;
+      height: 16px !important;
+      border-radius: 4px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 10px !important;
+      color: white !important;
+    }
+
+    /* Badge icon colors matching main categories */
+    .truthai-post-badge.news .truthai-badge-icon { background: #3b82f6 !important; }
+    .truthai-post-badge.personal .truthai-badge-icon { background: #8b5cf6 !important; }
+    .truthai-post-badge.entertainment .truthai-badge-icon { background: #f59e0b !important; }
+    .truthai-post-badge.commercial .truthai-badge-icon { background: #10b981 !important; }
+    .truthai-post-badge.educational .truthai-badge-icon { background: #06b6d4 !important; }
+    .truthai-post-badge.opinion .truthai-badge-icon { background: #ec4899 !important; }
+    .truthai-post-badge.fake .truthai-badge-icon { background: #ef4444 !important; }
+    .truthai-post-badge.real .truthai-badge-icon { background: #22c55e !important; }
+
+    .truthai-badge-text {
+      font-weight: 500 !important;
+      white-space: nowrap !important;
+      color: var(--truthai-text) !important;
+    }
+
+    .truthai-badge-confidence {
+      font-size: 10px !important;
+      color: var(--truthai-text-muted) !important;
+      margin-left: 4px !important;
+      padding: 2px 4px !important;
+      background: var(--truthai-surface-light) !important;
+      border-radius: 3px !important;
+    }
+
+    /* Dark mode support matching popup */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --truthai-surface: #1f2937 !important;
+        --truthai-surface-light: #374151 !important;
+        --truthai-text: #f9fafb !important;
+        --truthai-text-secondary: #e5e7eb !important;
+        --truthai-text-muted: #9ca3af !important;
+        --truthai-border: #4b5563 !important;
+      }
+      
+      .truthai-snackbar, .truthai-post-badge {
+        background: var(--truthai-surface) !important;
+        color: var(--truthai-text) !important;
+        border-color: var(--truthai-border) !important;
+      }
+      
+      .truthai-snackbar-confidence, .truthai-badge-confidence {
+        background: var(--truthai-surface-light) !important;
+        border-color: var(--truthai-border) !important;
+      }
+      
+      .truthai-btn {
+        background: var(--truthai-surface) !important;
+        border-color: var(--truthai-border) !important;
+        color: var(--truthai-text-secondary) !important;
+      }
+      
+      .truthai-btn:hover {
+        background: var(--truthai-surface-light) !important;
+      }
+    }
+
+    /* Responsive design matching popup breakpoints */
+    @media (max-width: 768px) {
+      .truthai-snackbar {
+        bottom: 16px !important;
+        right: 16px !important;
+        left: 16px !important;
+        max-width: none !important;
+        min-width: auto !important;
+        padding: 20px !important;
+      }
+      
+      .truthai-post-badge {
+        top: 8px !important;
+        right: 8px !important;
+        padding: 6px 8px !important;
+        font-size: 11px !important;
+      }
+      
+      .truthai-snackbar-title {
+        font-size: 15px !important;
+      }
+      
+      .truthai-snackbar-subtitle {
+        font-size: 13px !important;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -180,8 +409,66 @@
   } else {
     console.log("🔍 TruthAI: Chrome runtime API not available");
   }
+
+  // Get category-specific styling and content
+  function getCategoryInfo(classification) {
+    const category = classification.category.label.toLowerCase();
+    const auth = classification.authenticity.label.toLowerCase();
+    
+    const icons = {
+      news: '📰',
+      personal: '👤',
+      entertainment: '🎭',
+      commercial: '💼',
+      educational: '📚',
+      opinion: '💭',
+      fake: '⚠️',
+      real: '✅'
+    };
+
+    const icon = auth === 'fake' ? icons.fake : 
+                 auth === 'real' ? icons.real : 
+                 icons[category] || '📝';
+
+    const title = auth === 'fake' ? 'Potentially Misleading' :
+                  auth === 'real' ? 'Verified Content' :
+                  classification.category.label;
+
+    const subtitle = auth === 'fake' ? 'Content may contain inaccuracies' :
+                     auth === 'real' ? 'Information appears reliable' :
+                     classification.type.label;
+
+    return { icon, title, subtitle, category: auth || category };
+  }
+
+  // Create embedded post badge
+  function createPostBadge(post, classification) {
+    if (embeddedBadges.has(post)) return;
+
+    const { icon, title, category } = getCategoryInfo(classification);
+    
+    const badge = document.createElement('div');
+    badge.className = `truthai-post-badge ${category}`;
+    
+    const confidenceText = showConfidence ? 
+      `${Math.round(classification.category.confidence * 100)}%` : '';
+    
+    badge.innerHTML = `
+      <div class="truthai-badge-icon">${icon}</div>
+      <span class="truthai-badge-text">${title}</span>
+      ${confidenceText ? `<span class="truthai-badge-confidence">${confidenceText}</span>` : ''}
+    `;
+
+    // Position relative to post
+    post.style.position = 'relative';
+    post.appendChild(badge);
+    
+    embeddedBadges.add(post);
+    
+    console.log("🔍 TruthAI: Created embedded badge for post:", title);
+  }
   
-  // Create snackbar widget
+  // Create enhanced snackbar widget
   function createSnackbar(classification, postContent) {
     if (!snackbarEnabled) return;
     
@@ -191,53 +478,34 @@
       if (hideTimeout) clearTimeout(hideTimeout);
     }
     
+    const { icon, title, subtitle, category } = getCategoryInfo(classification);
+    
     const snackbar = document.createElement("div");
-    const categoryClass = classification.category.label.toLowerCase();
-    const authClass = classification.authenticity.label.toLowerCase();
-    
-    snackbar.className = `truthai-snackbar ${categoryClass}`;
-    if (authClass === 'fake' || authClass === 'real') {
-      snackbar.classList.add(authClass);
-    }
-    
-    const getEmoji = (category, type, auth) => {
-      if (auth === 'FAKE') return '⚠️';
-      if (auth === 'REAL') return '✅';
-      
-      switch (category) {
-        case 'News': return '📰';
-        case 'Personal': return '👤';
-        case 'Entertainment': return '🎭';
-        case 'Commercial': return '💼';
-        case 'Educational': return '📚';
-        case 'Opinion': return '💭';
-        default: return '📝';
-      }
-    };
-    
-    const emoji = getEmoji(classification.category.label, classification.type.label, classification.authenticity.label);
+    snackbar.className = `truthai-snackbar ${category}`;
     
     const confidenceDisplay = showConfidence ? `
-      <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">
-        ${classification.category.label} (${Math.round(classification.category.confidence*100)}%) • 
-        ${classification.type.label} (${Math.round(classification.type.confidence*100)}%)
+      <div class="truthai-snackbar-confidence">
+        ${classification.category.label} ${Math.round(classification.category.confidence*100)}% • 
+        ${classification.type.label} ${Math.round(classification.type.confidence*100)}%
         ${classification.authenticity.label !== 'N/A' ? 
-          ` • ${classification.authenticity.label} (${Math.round(classification.authenticity.confidence*100)}%)` : ''}
+          ` • ${classification.authenticity.label} ${Math.round(classification.authenticity.confidence*100)}%` : ''}
       </div>
     ` : '';
 
     snackbar.innerHTML = `
+      <div class="truthai-snackbar-icon">${icon}</div>
       <div class="truthai-snackbar-content">
-        <span style="font-size: 20px;">${emoji}</span>
-        <div style="flex: 1;">
-          <div style="font-weight: 600; margin-bottom: 2px; font-size: 14px;">${classification.summary}</div>
-          ${confidenceDisplay}
+        <div class="truthai-snackbar-title">
+          ${title}
         </div>
-      </div>
-      <div class="truthai-snackbar-buttons">
-        <button class="truthai-btn like" title="Mark as correct">👍</button>
-        <button class="truthai-btn dislike" title="Mark as incorrect">👎</button>
-        <button class="truthai-btn close" title="Close">×</button>
+        <div class="truthai-snackbar-subtitle">${subtitle}</div>
+        ${confidenceDisplay}
+        <div class="truthai-snackbar-actions">
+          <button class="truthai-btn like" title="Mark as helpful">👍</button>
+          <button class="truthai-btn dislike" title="Report issue">👎</button>
+          <button class="truthai-btn close" title="Close">×</button>
+        </div>
+        <div class="truthai-brand">TruthAI Analysis</div>
       </div>
     `;
     
@@ -247,11 +515,13 @@
     
     likeBtn.onclick = () => {
       likeBtn.innerHTML = '✅';
+      likeBtn.style.color = 'var(--truthai-success)';
       console.log('🔍 TruthAI: User marked classification as correct');
     };
     
     dislikeBtn.onclick = () => {
       dislikeBtn.innerHTML = '❌';
+      dislikeBtn.style.color = 'var(--truthai-error)';
       console.log('🔍 TruthAI: User marked classification as wrong');
     };
     
@@ -264,17 +534,13 @@
     document.body.appendChild(snackbar);
     currentSnackbar = snackbar;
     
-    // Force visibility and ensure it's actually shown
+    // Force visibility
     setTimeout(() => {
       if (snackbar && snackbar.parentNode) {
         snackbar.style.setProperty('display', 'flex', 'important');
         snackbar.style.setProperty('visibility', 'visible', 'important');
         snackbar.style.setProperty('opacity', '1', 'important');
-        snackbar.style.setProperty('position', 'fixed', 'important');
-        snackbar.style.setProperty('z-index', '2147483647', 'important');
-        console.log("🔍 TruthAI: Snackbar forced visible for:", classification.summary);
-        console.log("🔍 TruthAI: Snackbar element:", snackbar);
-        console.log("🔍 TruthAI: Snackbar computed style:", window.getComputedStyle(snackbar).display);
+        console.log("🔍 TruthAI: Enhanced snackbar displayed:", title);
       }
     }, 100);
     
@@ -467,6 +733,9 @@
       
       uniquePostsAnalyzed.add(content.id);
       
+      // Create embedded badge for this post
+      createPostBadge(post, classification);
+      
       // Update snackbar if this post is currently visible
       const visiblePost = getMostVisiblePost();
       if (visiblePost === post && snackbarEnabled) {
@@ -501,6 +770,9 @@
       });
       
       uniquePostsAnalyzed.add(content.id);
+      
+      // Create embedded badge even for fallback
+      createPostBadge(post, fallbackClassification);
     }
   }
 
@@ -633,7 +905,7 @@
       console.log("🔍 TruthAI: No posts found to analyze");
     }
     
-    console.log("🔍 TruthAI: Extension loaded and monitoring Facebook posts");
+    console.log("🔍 TruthAI: Enhanced extension loaded and monitoring Facebook posts");
   }
   
   // Start the extension when DOM is ready

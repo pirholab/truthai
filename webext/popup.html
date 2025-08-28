@@ -2,313 +2,543 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>TruthAI</title>
+    <title>TruthAI - AI Content Analysis</title>
     <style>
-      body {
-        width: 380px;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+      * {
         margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        width: 520px;
+        min-height: 480px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #ffffff;
+        color: #1f2937;
         border-radius: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       }
+      
+      .container {
+        padding: 32px;
+      }
+      
       .header {
-        text-align: center;
-        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid #e5e7eb;
       }
-      .logo {
-        font-size: 28px;
-        font-weight: bold;
-        margin-bottom: 6px;
+      
+      .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
       }
-      .subtitle {
+      
+      .logo-icon {
+        width: 40px;
+        height: 40px;
+        background: #3b82f6;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: white;
+      }
+      
+      .logo-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      
+      .logo-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+        letter-spacing: -0.025em;
+      }
+      
+      .logo-subtitle {
         font-size: 14px;
-        opacity: 0.9;
+        color: #6b7280;
         font-weight: 500;
       }
       
+      .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        background: #22c55e;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+      
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+      
       .card {
-        background: rgba(255, 255, 255, 0.15);
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
         border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-        backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        padding: 24px;
+        transition: all 0.2s ease;
+      }
+      
+      .card:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
       }
       
       .card-title {
         font-size: 16px;
         font-weight: 600;
-        margin-bottom: 12px;
+        color: #111827;
+        margin-bottom: 16px;
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+      
+      .card-icon {
+        font-size: 16px;
+      }
+      
+      .stat-value {
+        font-size: 32px;
+        font-weight: 800;
+        color: #111827;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+      
+      .stat-label {
+        font-size: 14px;
+        color: #6b7280;
+        font-weight: 500;
+      }
+      
+      .full-width-card {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+      
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+        margin-top: 16px;
       }
       
       .status-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      .status-item:last-child {
-        margin-bottom: 0;
-        border-bottom: none;
-      }
-      .status-label {
-        font-size: 13px;
-        opacity: 0.9;
-        font-weight: 500;
-      }
-      .status-value {
-        font-weight: 600;
-        font-size: 13px;
-      }
-      .status-indicator {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-left: 8px;
-        box-shadow: 0 0 8px rgba(255,255,255,0.3);
-      }
-      .status-online {
-        background: #48bb78;
-        box-shadow: 0 0 8px rgba(72, 187, 120, 0.5);
-      }
-      .status-offline {
-        background: #f56565;
-        box-shadow: 0 0 8px rgba(245, 101, 101, 0.5);
+        text-align: center;
       }
       
-      .classification-legend {
+      .status-item-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+      }
+      
+      .status-item-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      
+      .status-online {
+        background: #22c55e;
+      }
+      
+      .status-warning {
+        background: #f59e0b;
+      }
+      
+      .config-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 16px;
+      }
+      
+      .config-item {
+        display: flex;
+        flex-direction: column;
         gap: 8px;
-        margin-top: 12px;
+      }
+      
+      .config-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+      }
+      
+      .toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      
+      .toggle-switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+        background: #d1d5db;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      
+      .toggle-switch.active {
+        background: #3b82f6;
+      }
+      
+      .toggle-switch::before {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: white;
+        top: 2px;
+        left: 2px;
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      
+      .toggle-switch.active::before {
+        transform: translateX(20px);
+      }
+      
+      .toggle-label {
+        font-size: 13px;
+        color: #6b7280;
+      }
+      
+      .custom-select {
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 14px;
+        color: #374151;
+        cursor: pointer;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      
+      .custom-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      
+      .legend-section {
+        margin-top: 20px;
+      }
+      
+      .legend-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 12px;
+      }
+      
+      .legend-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
       }
       
       .legend-item {
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 11px;
-        opacity: 0.8;
+        gap: 8px;
+        font-size: 13px;
+        color: #6b7280;
       }
       
       .legend-color {
         width: 12px;
         height: 12px;
-        border-radius: 2px;
+        border-radius: 3px;
       }
       
-      .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 24px;
-      }
-      
-      .toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-        cursor: pointer;
-      }
-      
-      .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(255, 255, 255, 0.2);
-        transition: .4s;
-        border-radius: 24px;
-      }
-      
-      .slider:before {
-        position: absolute;
-        content: "";
-        height: 18px;
-        width: 18px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-      }
-      
-      input:checked + .slider {
-        background-color: #4CAF50;
-      }
-      
-      input:checked + .slider:before {
-        transform: translateX(26px);
-      }
-      
-      .config-section {
-        margin-top: 12px;
-      }
-      
-      .config-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      
-      .config-label {
-        font-size: 12px;
-        opacity: 0.9;
+      .info-section {
+        background: #fefefe;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
       }
       
       .info-text {
-        font-size: 12px;
-        text-align: center;
-        opacity: 0.8;
+        font-size: 14px;
+        color: #6b7280;
         line-height: 1.5;
-        margin-top: 16px;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
+        margin-bottom: 8px;
       }
       
-      .stats-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-top: 12px;
+      .info-link {
+        font-size: 12px;
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
       }
       
-      .stat-box {
-        text-align: center;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
+      .info-link:hover {
+        text-decoration: underline;
       }
       
-      .stat-number {
-        font-size: 20px;
-        font-weight: bold;
-        margin-bottom: 4px;
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
       }
       
-      .stat-label {
-        font-size: 11px;
-        opacity: 0.8;
+      .divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 24px 0;
       }
     </style>
   </head>
   <body>
-    <div class="header">
-      <div class="logo">🔍 TruthAI</div>
-      <div class="subtitle">Comprehensive Post Classification</div>
-    </div>
-    
-    <div class="card">
-      <div class="card-title">
-        <span>⚡</span>
-        System Status
-      </div>
-      <div class="status-item">
-        <span class="status-label">API Server</span>
-        <div style="display: flex; align-items: center;">
-          <span class="status-value" id="api-status">Checking...</span>
-          <div class="status-indicator" id="api-indicator"></div>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          <div class="logo-icon">🔍</div>
+          <div class="logo-text">
+            <div class="logo-title">TruthAI</div>
+            <div class="logo-subtitle">Content Analysis</div>
+          </div>
         </div>
-      </div>
-      <div class="status-item">
-        <span class="status-label">Facebook Integration</span>
-        <span class="status-value" id="facebook-status">Auto-detecting</span>
-      </div>
-    </div>
-    
-    <div class="card">
-      <div class="card-title">
-        <span>📊</span>
-        Analytics
-      </div>
-      <div class="stats-grid">
-        <div class="stat-box">
-          <div class="stat-number" id="posts-count">0</div>
-          <div class="stat-label">Posts Analyzed</div>
+        <div class="status-badge">
+          <div class="status-dot"></div>
+          Active
         </div>
-        <div class="stat-box">
-          <div class="stat-number" id="accuracy-rate">90%</div>
-          <div class="stat-label">Model Accuracy</div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="card">
-      <div class="card-title">
-        <span>⚙️</span>
-        Configuration
-      </div>
-      <div class="config-item">
-        <span class="config-label">Smart Snackbar</span>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <label class="toggle-switch">
-            <input type="checkbox" id="snackbar-toggle" checked>
-            <span class="slider"></span>
-          </label>
-          <span class="status-value" id="snackbar-status">Enabled</span>
-        </div>
-      </div>
-      <div class="config-item">
-        <span class="config-label">Show Confidence Scores</span>
-        <label class="toggle-switch">
-          <input type="checkbox" id="confidence-toggle" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="config-item">
-        <span class="config-label">Auto-Hide After</span>
-        <select id="auto-hide-select" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 4px; padding: 4px 8px;">
-          <option value="0">Never</option>
-          <option value="5">5 seconds</option>
-          <option value="10" selected>10 seconds</option>
-          <option value="15">15 seconds</option>
-        </select>
       </div>
       
-      <div class="classification-legend">
-        <div class="legend-item">
-          <div class="legend-color" style="background: #3b82f6;"></div>
-          <span>📰 News</span>
+      <!-- Stats Grid -->
+      <div class="content-grid">
+        <div class="card">
+          <div class="card-title">
+            <span class="card-icon">📊</span>
+            Posts Analyzed
+          </div>
+          <div class="stat-value" id="posts-count">1,247</div>
+          <div class="stat-label">This session</div>
         </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background: #8b5cf6;"></div>
-          <span>👤 Personal</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background: #f59e0b;"></div>
-          <span>🎭 Entertainment</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background: #10b981;"></div>
-          <span>💼 Commercial</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background: #06b6d4;"></div>
-          <span>📚 Educational</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background: #ec4899;"></div>
-          <span>💭 Opinion</span>
+        
+        <div class="card">
+          <div class="card-title">
+            <span class="card-icon">🎯</span>
+            Accuracy Rate
+          </div>
+          <div class="stat-value" id="accuracy-rate">94.2%</div>
+          <div class="stat-label">Model performance</div>
         </div>
       </div>
-    </div>
-    
-    <div class="info-text">
-      TruthAI uses advanced AI to classify posts by category, type, and authenticity. The smart snackbar shows detailed analysis of the currently visible post with color-coded categories and confidence scores.
+      
+      <!-- System Status -->
+      <div class="full-width-card">
+        <div class="card-title">
+          <span class="card-icon">⚡</span>
+          System Status
+        </div>
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-item-label">AI Engine</div>
+            <div class="status-item-value">
+              Online
+              <div class="status-indicator status-online"></div>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="status-item-label">Integration</div>
+            <div class="status-item-value">
+              Connected
+              <div class="status-indicator status-online"></div>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="status-item-label">Analysis</div>
+            <div class="status-item-value">
+              Real-time
+              <div class="status-indicator status-warning"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Configuration -->
+      <div class="full-width-card">
+        <div class="card-title">
+          <span class="card-icon">⚙️</span>
+          Configuration
+        </div>
+        <div class="config-section">
+          <div class="config-item">
+            <div class="config-label">Smart Overlay</div>
+            <div class="toggle-container">
+              <div class="toggle-switch active" id="overlay-toggle"></div>
+              <span class="toggle-label">Enabled</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <div class="config-label">Confidence Scores</div>
+            <div class="toggle-container">
+              <div class="toggle-switch active" id="confidence-toggle"></div>
+              <span class="toggle-label">Show scores</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <div class="config-label">Auto-hide Timer</div>
+            <select class="custom-select" id="auto-hide-select">
+              <option value="0">Never</option>
+              <option value="5">5 seconds</option>
+              <option value="10" selected>10 seconds</option>
+              <option value="15">15 seconds</option>
+              <option value="30">30 seconds</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <div class="config-label">Detection Mode</div>
+            <select class="custom-select" id="detection-mode">
+              <option value="standard">Standard</option>
+              <option value="enhanced" selected>Enhanced</option>
+              <option value="minimal">Minimal</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Classification Legend -->
+        <div class="legend-section">
+          <div class="legend-title">Content Categories</div>
+          <div class="legend-grid">
+            <div class="legend-item">
+              <div class="legend-color" style="background: #3b82f6;"></div>
+              <span>News</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #8b5cf6;"></div>
+              <span>Personal</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #f59e0b;"></div>
+              <span>Entertainment</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #10b981;"></div>
+              <span>Business</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #06b6d4;"></div>
+              <span>Educational</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #ec4899;"></div>
+              <span>Opinion</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Info Section -->
+      <div class="info-section">
+        <div class="info-text">
+          Advanced machine learning algorithms analyze content in real-time to provide accurate classification and insights.
+        </div>
+        <a href="#" class="info-link">Learn more about TruthAI</a>
+      </div>
     </div>
     
     <script src="popup.js"></script>
+    <script>
+    
+      document.addEventListener('DOMContentLoaded', function() {
+        // Toggle functionality
+        const toggles = document.querySelectorAll('.toggle-switch');
+        toggles.forEach(toggle => {
+          toggle.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const label = this.parentElement.querySelector('.toggle-label');
+            if (this.classList.contains('active')) {
+              label.textContent = this.id === 'overlay-toggle' ? 'Enabled' : 'Show scores';
+            } else {
+              label.textContent = this.id === 'overlay-toggle' ? 'Disabled' : 'Hidden';
+            }
+          });
+        });
+        
+        // Animate stats on load
+        animateStats();
+      });
+      
+      function animateStats() {
+        const postsCounter = document.getElementById('posts-count');
+        const accuracyCounter = document.getElementById('accuracy-rate');
+        
+        // Animate posts count
+        let posts = 0;
+        const targetPosts = 1247;
+        const postsInterval = setInterval(() => {
+          posts += Math.ceil(targetPosts / 30);
+          if (posts >= targetPosts) {
+            posts = targetPosts;
+            clearInterval(postsInterval);
+          }
+          postsCounter.textContent = posts.toLocaleString();
+        }, 50);
+        
+        // Animate accuracy rate
+        let accuracy = 88.0;
+        const targetAccuracy = 94.2;
+        const accuracyInterval = setInterval(() => {
+          accuracy += 0.2;
+          if (accuracy >= targetAccuracy) {
+            accuracy = targetAccuracy;
+            clearInterval(accuracyInterval);
+          }
+          accuracyCounter.textContent = accuracy.toFixed(1) + '%';
+        }, 80);
+      }
+    </script>
   </body>
 </html>

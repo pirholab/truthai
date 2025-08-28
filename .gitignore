@@ -35,8 +35,8 @@ ENV/
 *.joblib
 
 # Data files (potentially large)
-data/raw/*.csv
-data/processed/*.csv
+# data/raw/*.csv
+# data/processed/*.csv
 
 # IDE
 .vscode/

@@ -3,17 +3,156 @@
   <head>
     <meta charset="utf-8" />
     <title>TruthAI</title>
+    <style>
+      body {
+        width: 300px;
+        padding: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin: 0;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 16px;
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+      .subtitle {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .status-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+        backdrop-filter: blur(10px);
+      }
+      .status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .status-item:last-child {
+        margin-bottom: 0;
+      }
+      .status-label {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      .status-value {
+        font-weight: bold;
+        font-size: 12px;
+      }
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-left: 8px;
+      }
+      .status-online {
+        background: #48bb78;
+      }
+      .status-offline {
+        background: #f56565;
+      }
+      .info-text {
+        font-size: 11px;
+        text-align: center;
+        opacity: 0.7;
+        line-height: 1.4;
+        margin-top: 12px;
+      }
+      
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+      
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255,255,255,0.3);
+        transition: .4s;
+        border-radius: 20px;
+      }
+      
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      
+      input:checked + .slider {
+        background-color: #48bb78;
+      }
+      
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+    </style>
   </head>
   <body>
-    <textarea
-      id="text"
-      rows="8"
-      cols="40"
-      placeholder="Paste text to check"
-    ></textarea>
-    <br />
-    <button id="check">Check</button>
-    <pre id="out"></pre>
+    <div class="header">
+      <div class="logo">🔍 TruthAI</div>
+      <div class="subtitle">Automatic Fake News Detection</div>
+    </div>
+    
+    <div class="status-card">
+      <div class="status-item">
+        <span class="status-label">API Status</span>
+        <div style="display: flex; align-items: center;">
+          <span class="status-value" id="api-status">Checking...</span>
+          <div class="status-indicator" id="api-indicator"></div>
+        </div>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Posts Analyzed</span>
+        <span class="status-value" id="posts-count">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Active on Facebook</span>
+        <span class="status-value" id="facebook-status">Auto-detecting</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Snackbar Widget</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label class="toggle-switch">
+            <input type="checkbox" id="snackbar-toggle" checked>
+            <span class="slider"></span>
+          </label>
+          <span class="status-value" id="snackbar-status">Enabled</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-text">
+      TruthAI analyzes Facebook posts and shows results in a snackbar at the bottom of the screen. The snackbar displays the analysis of the currently visible post and can be toggled on/off above.
+    </div>
+    
     <script src="popup.js"></script>
   </body>
 </html>

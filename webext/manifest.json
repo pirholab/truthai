@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Check Facebook posts and any text for misinformation.",
   "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["http://localhost:8000/*", "https://your-api-domain/*"],
+  
   "action": { "default_popup": "popup.html" },
   "content_scripts": [
     {

@@ -16,6 +16,10 @@ def load():
     df["text"] = (df["title"].fillna("") + " \n " + df["text"].fillna("")).str.strip()
     return df[["text","label"]].sample(frac=1.0, random_state=42).reset_index(drop=True)
 
+
+
+
+
 def main():
     df = load()
     train_df, temp = train_test_split(df, test_size=0.2, stratify=df["label"], random_state=42)

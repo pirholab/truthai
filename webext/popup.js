@@ -1,4 +1,4 @@
-const API = "http://localhost:8000/api/health";
+const API = "http://localhost:8000/health";
 
 // Global configuration
 let config = {

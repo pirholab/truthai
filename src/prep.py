@@ -7,8 +7,8 @@ OUT = Path("data/processed")
 OUT.mkdir(parents=True, exist_ok=True)
 
 def load():
-    fake = pd.read_csv(RAW/"Fake.csv")
-    true = pd.read_csv(RAW/"True.csv")
+    fake = pd.read_csv(RAW/"test.csv")
+    true = pd.read_csv(RAW/"fake.csv")
     fake["label"] = 0
     true["label"] = 1
     df = pd.concat([fake, true], ignore_index=True)

@@ -1,7 +1,7 @@
 (function() {
   'use strict';
   
-  const API = "http://localhost:8000/api";
+  const API = "http://localhost:8000/classify/";
   
   // Global state
   let snackbarEnabled = true;

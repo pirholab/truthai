@@ -34,7 +34,10 @@ MODEL = load_model()
 def predict(text: str) -> dict:
     try:
         x = torch.tensor([encode(clean_text(text), VOCAB, 320)], device=DEVICE)
-        
+        with torch.no_grad():
+            logit = MODEL(x)
+            cls = int(logit.argmax(1).item())
+            conf = float(torch.softmax(logit, dim=1).max().item())
         return {"label": "REAL" if cls==1 else "FAKE", "confidence": conf, "source": MODEL_TYPE}
     except Exception:
         # fallback to baseline

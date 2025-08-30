@@ -14,7 +14,17 @@ async function checkAPIStatus() {
   
   try {
     const response = await fetch(API);
-    
+    if (response.ok) {
+      aiEngineStatus.innerHTML = 'Online <div class="status-indicator status-online"></div>';
+      if (aiEngineIndicator) {
+        aiEngineIndicator.className = "status-indicator status-online";
+      }
+    } else {
+      aiEngineStatus.innerHTML = 'Error <div class="status-indicator status-warning"></div>';
+      if (aiEngineIndicator) {
+        aiEngineIndicator.className = "status-indicator status-warning";
+      }
+    }
   } catch (error) {
     aiEngineStatus.innerHTML = 'Offline <div class="status-indicator status-warning"></div>';
     if (aiEngineIndicator) {

@@ -80,54 +80,7 @@ def predict_comprehensive(text: str) -> dict:
                 category_conf = 0.6 + (text_hash % 100) / 300  # 0.6-0.93
             
             # Improve type classification with more variety
-            if 'politics' in text_lower or 'political' in text_lower or 'government' in text_lower:
-                type_pred = 0  # Politics
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['sports', 'game', 'team', 'player', 'match', 'football', 'soccer']):
-                type_pred = 1  # Sports
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['meme', 'funny', 'lol', 'joke', 'haha']):
-                type_pred = 12  # Meme
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['health', 'medical', 'doctor', 'medicine']):
-                type_pred = 2  # Health
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['technology', 'tech', 'computer', 'software', 'app']):
-                type_pred = 3  # Technology
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['travel', 'vacation', 'trip', 'journey']):
-                type_pred = 4  # Travel
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['food', 'recipe', 'cooking', 'restaurant', 'eat']):
-                type_pred = 5  # Food
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['fashion', 'style', 'clothes', 'outfit']):
-                type_pred = 6  # Fashion
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['music', 'song', 'album', 'artist', 'concert']):
-                type_pred = 7  # Music
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['movie', 'film', 'cinema', 'actor', 'actress']):
-                type_pred = 8  # Movies
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['book', 'reading', 'author', 'novel']):
-                type_pred = 9  # Books
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['art', 'painting', 'drawing', 'creative']):
-                type_pred = 10  # Art
-                type_conf = min(0.95, type_conf + 0.2)
-            elif any(word in text_lower for word in ['science', 'research', 'study', 'discovery']):
-                type_pred = 11  # Science
-                type_conf = min(0.95, type_conf + 0.2)
-            else:
-                # Use hash to create varied type predictions
-                type_pred = text_hash % len(PostClassificationSystem.TYPES)
-                type_conf = 0.5 + (text_hash % 200) / 500  # 0.5-0.9
             
-            # Map predictions to labels
-            category_label = PostClassificationSystem.CATEGORIES[category_pred]
-            type_label = PostClassificationSystem.TYPES[type_pred]
-            auth_label = PostClassificationSystem.AUTHENTICITY[auth_pred]
             
             # Create comprehensive result
             result = {

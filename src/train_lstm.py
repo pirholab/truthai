@@ -67,13 +67,7 @@ def main():
     test_dl  = DataLoader(test_ds,  batch_size=64)
 
     best = 0.0
-    for epoch in range(10):
-        acc = train_epoch(model, train_dl, crit, opt, device)
-        val_acc, _ = eval_split(model, val_dl, device)
-        print(f"epoch {epoch}: train={acc:.4f} val={val_acc:.4f}")
-        if val_acc > best:
-            best = val_acc
-            torch.save(model.state_dict(), MODELS/"lstm_best.pt")
+    
 
     model.load_state_dict(torch.load(MODELS/"lstm_best.pt", map_location=device))
     test_acc, report = eval_split(model, test_dl, device)
